@@ -1,0 +1,13 @@
+MP3 player:
+https://www.instructables.com/Tutorial-of-MP3-TF-16P/
+
+Ultrasonic distance detector:
+https://forum.arduino.cc/t/help-understanding-breaking-down-this-code/699362/5
+
+XBee:
+https://circuitdigest.com/microcontroller-projects/arduino-xbee-module-interfacing-tutorial
+https://www.instructables.com/How-to-Use-XBee-Modules-As-Transmitter-Receiver-Ar/
+CH:C
+ID:1020
+BD:9600
+NI:Node1
