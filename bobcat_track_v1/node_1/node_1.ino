@@ -1,16 +1,21 @@
-#include "Arduino.h"
 #include <SoftwareSerial.h>
-#include <math.h>  // For pow function in extractDigit
 #include <DFRobotDFPlayerMini.h>
-DFRobotDFPlayerMini myDFPlayer;
+#include <RGB_led.h>
 
 // pin settings
 #define XBee Serial3
 #define mp3_serial Serial1
 #define ultrasonic_serial Serial2
 const int ultrasonic_relay_pin = 8;
-const int actuator_pos_relay_pin = 6;
-const int actuator_neg_relay_pin = 5;
+const int actuator_pos_relay_pin = 7;
+const int actuator_neg_relay_pin = 6;
+const int led_R = 3;
+const int led_G = 4;
+const int led_B = 5;
+
+// class objects
+DFRobotDFPlayerMini myDFPlayer;
+RGB_led led(led_R, led_G, led_B);
 
 /// variables
 // general
@@ -26,10 +31,12 @@ char incomingByte;     //Variable to store the incoming byte
 char msg[100];         //Message - array
 byte index;            //Index of array
 // message context
-int feeder_ID;                  // 3: 0, 1, 2
-int cmd;                        // 3: 3, 4, 5
-unsigned long planned_timeout;  // 4: 6, 7, 8, 9
-int planned_distance;           // 4: 10, 11, 12, 13
+int feeder_ID;            // 3: 0, 1, 2
+int cmd;                  // 3: 3, 4, 5
+int planned_timeout_sec;  // 4: 6, 7, 8, 9
+int planned_distance;     // 4: 10, 11, 12, 13
+
+unsigned long planned_timeout;
 
 // audio
 int audio_volume = 20;                 // volume of audio played from speaker. Must be between 0-30 (Default is 20)
@@ -68,82 +75,88 @@ void setup() {
   delay(1000);
 
   ball_reset();
+  led.change_color('b');
 }
 
 void loop() {
- //if (XBee.available()) {
-    // read message and store
-    //receive_XBee();
+  //if (XBee.available()) {
+  // read message and store
+  //receive_XBee();
 
-    // testing
-    feeder_ID = 1;
-    cmd = 100;                    
-    planned_timeout = 20 * 1000;  // 20 sec
-    planned_distance = 300;
+  // testing
+  feeder_ID = 1;
+  cmd = 100;
+  planned_timeout = 20 * 1000;  // 20 sec
+  planned_distance = 300;
 
-    // skip other node information
-    if (feeder_ID != this_node_ID)
-      return;
-    Serial.println("This node!");
+  // skip other node information
+  if (feeder_ID != this_node_ID)
+    return;
+  Serial.println("This node!");
 
-    // Feed cmd
-    if (cmd == 101) {
-      Serial.println("Ball release!");
-      ball_release();
-    }
-    // tracing cmd
-    else if (cmd == 100) {
-      Serial.println("Start tracing");
+  // Feed cmd
+  if (cmd == 101) {
+    Serial.println("Start ball release!");
+    led.change_color('g');
+    ball_release();
+    Serial.println("End ball release!");
+    led.change_color('b');
+  }
+  // tracing cmd
+  else if (cmd == 100) {
+    Serial.println("Start tracing");
+    led.change_color('r');
 
-      // initializatoin
-      enable_ultrasonic();
-      start_time = millis();
-      is_success = false;
-      consist_pos_counter = 0;
-      audio_next_time = 0;
+    // initializatoin
+    enable_ultrasonic();
+    start_time = millis();
+    is_success = false;
+    consist_pos_counter = 0;
+    audio_next_time = 0;
 
-      // Active node detect_dision loop; Remains true while nothing is within detect_dision radius and node has not reached timeout limit to be considered failure
-      while (millis() - start_time < planned_timeout) {
-        // check if it is the time to play audio again
-        if (millis() - start_time > audio_next_time) {
-          audio_next_time = audio_next_time + audio_loop_time;
-          play_audio();
-          Serial.println("play_audio.");
-        }
-
-        // check distance
-        distance = detect_dis();
-        //Serial.println(distance);
-        if (distance < planned_distance) {
-          consist_pos_counter++;            // Increment false positives by 1
-          if (consist_pos_counter >= 15) {  // If the object has been consistently detect_dised
-            is_success = true;              // Set success to true
-            break;                          // Break out of the loop
-          }
-        } else {
-          consist_pos_counter = 0;
-        }
+    // Active node detect_dision loop; Remains true while nothing is within detect_dision radius and node has not reached timeout limit to be considered failure
+    while (millis() - start_time < planned_timeout) {
+      // check if it is the time to play audio again
+      if (millis() - start_time > audio_next_time) {
+        audio_next_time = audio_next_time + audio_loop_time;
+        play_audio();
+        Serial.println("play_audio.");
       }
 
-      // finish up
-      disable_ultrasonic();
-      pause_audio();
-      send_XBee(is_success);
-      Serial.println("End tracing.");
-    }
-    // other cmd
-    else {
-      Serial.println("Unknown cmd...");
+      // check distance
+      distance = detect_dis();
+      //Serial.println(distance);
+      if (distance < planned_distance) {
+        consist_pos_counter++;            // Increment false positives by 1
+        if (consist_pos_counter >= 15) {  // If the object has been consistently detect_dised
+          is_success = true;              // Set success to true
+          break;                          // Break out of the loop
+        }
+      } else {
+        consist_pos_counter = 0;
+      }
     }
 
-    delay(2000);
- //}
+    // finish up
+    disable_ultrasonic();
+    pause_audio();
+    send_XBee(is_success);
+    Serial.println("End tracing.");
+    led.change_color('b');
+  }
+  // other cmd
+  else {
+    Serial.println("Unknown cmd...");
+  }
+
+  delay(2000);
+  //}
 }
 
 // receive message from XBee
-// <[feeder_ID, 3][cmd, 3][planned_timeout, 4][planned_distance, 4]>
+// <[feeder_ID, 3][cmd, 3][planned_timeout_sec, 4][planned_distance, 4]>
 void receive_XBee() {
-  while (Serial3.available() > 0) {
+  while (XBee.available() > 0) {
     //Read the incoming byte
     incomingByte = XBee.read();
     //Start the message when the '<' symbol is received
@@ -172,10 +185,14 @@ void receive_XBee() {
   if (started && ended) {
     String receivedMsg(msg);
     feeder_ID = receivedMsg.substring(0, 3).toInt();
-    cmd = receivedMsg.substring(3, 3).toInt();
-    planned_timeout = receivedMsg.substring(6, 4).toInt() * 1000;  // sec convert to msec
-    planned_distance = receivedMsg.substring(10, 4).toInt();       //mm
+    // only process more when this is the ID
+    if (feeder_ID == this_node_ID) {
+      cmd = receivedMsg.substring(3, 3).toInt();
+      planned_timeout_sec = receivedMsg.substring(6, 4).toInt();
+      planned_distance = receivedMsg.substring(10, 4).toInt();  //mm
 
+      planned_timeout = planned_timeout_sec * 1000;  // sec convert to msec
+    }
     // reset receiver
     index = 0;
     msg[index] = '\0';
@@ -241,11 +258,9 @@ void ball_release() {
   digitalWrite(actuator_pos_relay_pin, HIGH);
 }
 
-void ball_reset(){
+void ball_reset() {
   // Raise linear actuator if not raised already
   digitalWrite(actuator_pos_relay_pin, LOW);
   delay(2000);
   digitalWrite(actuator_pos_relay_pin, HIGH);
 }
-// Class for RGB LEDs
-///

@@ -11,3 +11,14 @@ CH:C
 ID:1020
 BD:9600
 NI:Node1
+
+// message
+int feeder_ID;        // 3: 0, 1, 2
+int cmd;              // 3: 3, 4, 5
+long planned_timeout  // 4: 6, 7, 8, 9
+int planned_distance  // 4: 10, 11, 12, 13
+
+cmd:
+100: trace
+101: feed
+
