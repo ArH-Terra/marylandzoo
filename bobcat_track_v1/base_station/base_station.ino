@@ -1,6 +1,6 @@
 #include <SoftwareSerial.h>
 
-SoftwareSerial XBee(2, 3); // RX, TX on Arduino Uno
+SoftwareSerial XBee(2, 3); // RX, TX
 
 void setup() {
   Serial.begin(9600);
