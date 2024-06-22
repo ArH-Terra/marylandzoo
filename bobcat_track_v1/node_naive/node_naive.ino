@@ -29,12 +29,14 @@ void setup() {
 
   // Initialize XBee
   XBee.begin(9600);  // Initialize XBee communication at 9600 baud
+  drain_XBee();
 }
 
 void loop() {
   if (XBee.available()) {
     // read message and store
     receive_XBee();
+    Serial.println("Receive once!");
 
     // skip other node information
     if (feeder_ID != this_node_ID)
@@ -44,16 +46,21 @@ void loop() {
     // tracing cmd
     if (cmd == 100) {
       Serial.println("Start tracing");
-      delay(2000);
+      delay(5000);
       send_XBee(true);
       Serial.println("End tracing.");
+    } else if (cmd == 101) {
+      Serial.println("Feed!");
     }
+
+    delay(200);
   }
 }
 
 // receive message from XBee
 // <[feeder_ID, 3][cmd, 3][planned_timeout_sec, 4][planned_distance, 4]>
 void receive_XBee() {
+  delay(200);  // so that the giver gives the info fully
   while (XBee.available() > 0) {
     //Read the incoming byte
     incomingByte = XBee.read();
@@ -70,7 +77,7 @@ void receive_XBee() {
     }
     //Read the message!
     else {
-      if (index < 4)  // Make sure there is room
+      if (index < 100 - 1)  // Make sure there is room
       {
         msg[index] = incomingByte;  // Add char to array
         index++;
@@ -79,18 +86,21 @@ void receive_XBee() {
     }
   }
 
+  Serial.println("XBee received:");
   Serial.println(msg);  // display it
-  
+
   if (started && ended) {
     String receivedMsg(msg);
     feeder_ID = receivedMsg.substring(0, 3).toInt();
     // only process more when this is the ID
     if (feeder_ID == this_node_ID) {
-      cmd = receivedMsg.substring(3, 3).toInt();
-      planned_timeout_sec = receivedMsg.substring(6, 4).toInt();
-      planned_distance = receivedMsg.substring(10, 4).toInt();  //mm
-
-      planned_timeout = planned_timeout_sec * 1000;  // sec convert to msec
+      cmd = receivedMsg.substring(3, 6).toInt();
+      planned_timeout_sec = receivedMsg.substring(6, 10).toInt();
+      planned_distance = receivedMsg.substring(10, 14).toInt();  //mm
+      planned_timeout = planned_timeout_sec * 1000;              // sec convert to msec
+      Serial.println(cmd);
+      Serial.println(planned_timeout_sec);
+      Serial.println(planned_distance);
     }
     // reset receiver
     index = 0;
@@ -100,10 +110,19 @@ void receive_XBee() {
   }
 }
 
+// drain old message from XBee
+void drain_XBee() {
+  while (XBee.available() > 0) {
+    //Read the incoming byte
+    incomingByte = XBee.read();
+  }
+}
+
 // send message to XBee
 // <[center_ID = 000, 3][feeder_ID, 3][is_success, 1]>
 void send_XBee(bool is_success) {
   sprintf(msg, "<%03d%03d%1d>", 0, feeder_ID, is_success);
-  XBee.println(msg);
+  XBee.print(msg);
+  Serial.println("XBee sent:");
   Serial.println(msg);
 }

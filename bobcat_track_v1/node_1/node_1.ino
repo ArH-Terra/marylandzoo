@@ -75,87 +75,89 @@ void setup() {
   delay(1000);
 
   ball_reset();
+  drain_XBee();
   led.change_color('b');
 }
 
 void loop() {
-  //if (XBee.available()) {
-  // read message and store
-  //receive_XBee();
+  if (XBee.available()) {
+    // read message and store
+    receive_XBee();
 
-  // testing
-  feeder_ID = 1;
-  cmd = 100;
-  planned_timeout = 20 * 1000;  // 20 sec
-  planned_distance = 300;
+    // testing
+    //feeder_ID = 1;
+    //cmd = 100;
+    //planned_timeout = 20 * 1000;  // 20 sec
+    //planned_distance = 300;
 
-  // skip other node information
-  if (feeder_ID != this_node_ID)
-    return;
-  Serial.println("This node!");
+    // skip other node information
+    if (feeder_ID != this_node_ID)
+      return;
+    Serial.println("This node!");
 
-  // Feed cmd
-  if (cmd == 101) {
-    Serial.println("Start ball release!");
-    led.change_color('g');
-    ball_release();
-    Serial.println("End ball release!");
-    led.change_color('b');
-  }
-  // tracing cmd
-  else if (cmd == 100) {
-    Serial.println("Start tracing");
-    led.change_color('r');
+    // Feed cmd
+    if (cmd == 101) {
+      Serial.println("Start ball release!");
+      led.change_color('r');
+      ball_release();
+      Serial.println("End ball release!");
+      led.change_color('b');
+    }
+    // tracing cmd
+    else if (cmd == 100) {
+      Serial.println("Start tracing");
+      led.change_color('g');
 
-    // initializatoin
-    enable_ultrasonic();
-    start_time = millis();
-    is_success = false;
-    consist_pos_counter = 0;
-    audio_next_time = 0;
+      // initializatoin
+      enable_ultrasonic();
+      start_time = millis();
+      is_success = false;
+      consist_pos_counter = 0;
+      audio_next_time = 0;
 
-    // Active node detect_dision loop; Remains true while nothing is within detect_dision radius and node has not reached timeout limit to be considered failure
-    while (millis() - start_time < planned_timeout) {
-      // check if it is the time to play audio again
-      if (millis() - start_time > audio_next_time) {
-        audio_next_time = audio_next_time + audio_loop_time;
-        play_audio();
-        Serial.println("play_audio.");
-      }
-
-      // check distance
-      distance = detect_dis();
-      //Serial.println(distance);
-      if (distance < planned_distance) {
-        consist_pos_counter++;            // Increment false positives by 1
-        if (consist_pos_counter >= 15) {  // If the object has been consistently detect_dised
-          is_success = true;              // Set success to true
-          break;                          // Break out of the loop
+      // Active node detect_dision loop; Remains true while nothing is within detect_dision radius and node has not reached timeout limit to be considered failure
+      while (millis() - start_time < planned_timeout) {
+        // check if it is the time to play audio again
+        if (millis() - start_time > audio_next_time) {
+          audio_next_time = audio_next_time + audio_loop_time;
+          play_audio();
+          Serial.println("play_audio.");
         }
-      } else {
-        consist_pos_counter = 0;
+
+        // check distance
+        distance = detect_dis();
+        //Serial.println(distance);
+        if (distance < planned_distance) {
+          consist_pos_counter++;            // Increment false positives by 1
+          if (consist_pos_counter >= 15) {  // If the object has been consistently detect_dised
+            is_success = true;              // Set success to true
+            break;                          // Break out of the loop
+          }
+        } else {
+          consist_pos_counter = 0;
+        }
       }
+
+      // finish up
+      disable_ultrasonic();
+      pause_audio();
+      send_XBee(is_success);
+      Serial.println("End tracing.");
+      led.change_color('b');
+    }
+    // other cmd
+    else {
+      Serial.println("Unknown cmd...");
     }
 
-    // finish up
-    disable_ultrasonic();
-    pause_audio();
-    send_XBee(is_success);
-    Serial.println("End tracing.");
-    led.change_color('b');
+    //delay(2000);
   }
-  // other cmd
-  else {
-    Serial.println("Unknown cmd...");
-  }
-
-  delay(2000);
-  //}
 }
 
 // receive message from XBee
 // <[feeder_ID, 3][cmd, 3][planned_timeout_sec, 4][planned_distance, 4]>
 void receive_XBee() {
+  delay(200);  // so that the giver gives the info fully
   while (XBee.available() > 0) {
     //Read the incoming byte
     incomingByte = XBee.read();
@@ -172,7 +174,7 @@ void receive_XBee() {
     }
     //Read the message!
     else {
-      if (index < 4)  // Make sure there is room
+      if (index < 100 - 1)  // Make sure there is room
       {
         msg[index] = incomingByte;  // Add char to array
         index++;
@@ -181,17 +183,22 @@ void receive_XBee() {
     }
   }
 
+  Serial.println("XBee received:");
   Serial.println(msg);  // display it
+
   if (started && ended) {
     String receivedMsg(msg);
     feeder_ID = receivedMsg.substring(0, 3).toInt();
     // only process more when this is the ID
     if (feeder_ID == this_node_ID) {
-      cmd = receivedMsg.substring(3, 3).toInt();
-      planned_timeout_sec = receivedMsg.substring(6, 4).toInt();
-      planned_distance = receivedMsg.substring(10, 4).toInt();  //mm
-
-      planned_timeout = planned_timeout_sec * 1000;  // sec convert to msec
+      cmd = receivedMsg.substring(3, 6).toInt();
+      planned_timeout_sec = receivedMsg.substring(6, 10).toInt();
+      planned_distance = receivedMsg.substring(10, 14).toInt();  //mm
+      planned_timeout = planned_timeout_sec * 1000;              // sec convert to msec
+      Serial.println("CMD, timeout, distance:");
+      Serial.println(cmd);
+      Serial.println(planned_timeout_sec);
+      Serial.println(planned_distance);
     }
     // reset receiver
     index = 0;
@@ -201,11 +208,20 @@ void receive_XBee() {
   }
 }
 
+// drain old message from XBee
+void drain_XBee() {
+  while (XBee.available() > 0) {
+    //Read the incoming byte
+    incomingByte = XBee.read();
+  }
+}
+
 // send message to XBee
 // <[center_ID = 000, 3][feeder_ID, 3][is_success, 1]>
 void send_XBee(bool is_success) {
   sprintf(msg, "<%03d%03d%1d>", 0, feeder_ID, is_success);
   XBee.println(msg);
+  Serial.println("XBee sent:");
   Serial.println(msg);
 }
 
