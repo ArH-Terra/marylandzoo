@@ -85,10 +85,11 @@ void setup() {
   digitalWrite(actuator_pos_relay_pin, HIGH);
   digitalWrite(actuator_neg_relay_pin, HIGH);
   delay(1000);
+  led.change_color('r');
 
   ball_reset();
   drain_XBee();
-  led.change_color('b');
+  led.change_color('g');
   Serial.println("Ready!");
 }
 
@@ -115,12 +116,12 @@ void loop() {
       led.change_color('r');
       ball_release();
       Serial.println("End ball release!");
-      led.change_color('b');
+      led.change_color('g');
     }
     // tracing cmd
     else if (cmd == 100) {
       Serial.println("Start tracing");
-      led.change_color('g');
+      led.change_color('b');
 
       // initializatoin
       enable_ultrasonic();
@@ -156,7 +157,7 @@ void loop() {
       disable_ultrasonic();
       pause_audio();
       send_XBee(is_success);
-      led.change_color('b');
+      led.change_color('g');
     }
     // other cmd
     else {
