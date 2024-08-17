@@ -3,7 +3,7 @@
 SoftwareSerial XBee(2, 3);  // RX, TX
 
 // setting
-int food_node = 1;
+int food_node = 3;
 
 //general
 int success_node_num;
@@ -35,6 +35,11 @@ void setup() {
   drain_XBee();
   while (!Serial)
     ;
+
+  feeder_ID = food_node;  // always select node 1 for now
+  cmd = 300; //just a wrong one 
+  drain_XBee();
+  send_XBee();
 }
 
 void loop() {
@@ -48,7 +53,7 @@ void loop() {
   // trace
   while (success_node_num < planned_node_num) {
     // select a new node
-    feeder_ID = 1;  // always select node 1 for now
+    feeder_ID = food_node;  // always select node 1 for now
     cmd = 100;
     drain_XBee();
     send_XBee();

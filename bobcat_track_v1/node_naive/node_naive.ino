@@ -1,9 +1,9 @@
 #include <SoftwareSerial.h>
-SoftwareSerial XBee(2, 3);  // RX, TX
+SoftwareSerial XBee(12, 13);  // RX, TX
 
 /// variables
 // general
-const int this_node_ID = 2;  // Unique ID for this node
+const int this_node_ID = 1;  // Unique ID for this node
 unsigned long start_time;
 bool is_success;  // Bool used to determine success or failure in node
 int consist_pos_counter;
@@ -30,6 +30,7 @@ void setup() {
   // Initialize XBee
   XBee.begin(9600);  // Initialize XBee communication at 9600 baud
   drain_XBee();
+  Serial.println("Ready!");
 }
 
 void loop() {
