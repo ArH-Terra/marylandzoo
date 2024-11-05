@@ -1,4 +1,3 @@
-
 // library and objects
 /// LCD
 #include <LiquidCrystal_I2C.h>
@@ -29,11 +28,45 @@ Keypad kp = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 #include <RotaryEncoder.h>
 RotaryEncoder re(A2, A3, RotaryEncoder::LatchMode::FOUR0);
 
+// timer
+#include <arduino-timer.h>
+auto timer = timer_create_default();
+const int blink_interval_ms = 400;
+bool timer_toggle = false;
+int timer_num = 0;
+void timer_function() {
+  timer_num++;
+  if (timer_num > 2) {
+    timer_num = 0;
+  }
+  if (timer_num == 2) {
+    timer_toggle = false;
+  } else {
+    timer_toggle = true;
+  }
+  delay(1);
+}
+
 // variables
-const int blink_interval_ms = 100;
+const int digit_num = 3;
+char num_c[digit_num];
+int num = 0;
+const int low_lim = 0;
+const int high_lim = 999;
+
+// functions
+void num2char(int n, char* n_c, int digit_n) {  // calculate number char
+  for (int i = digit_n - 1; i >= 0; i--) {
+    n_c[i] = n % 10 + '0';
+    n = n / 10;
+  }
+}
 
 // main
 void setup() {
+  // number initiation
+  num2char(num, num_c, digit_num);
+
   // LCD initiation
   lcd.init();
   lcd.backlight();
@@ -44,9 +77,12 @@ void setup() {
   // button initiation
   re_b.begin();
 
+  // timer initiation
+  timer.every(blink_interval_ms, timer_function);
+
   // serial?
   Serial.begin(9600);
-  while (!Serial) {};
+  while (!Serial) { ; };
 }
 
 void loop() {
@@ -78,14 +114,12 @@ void loop() {
   */
 
   // variables
-  const int digit_num = 2;
-  static char num_c[2] = { '0', '0' };
-  static int num = 0;
   static int input_mode = 0;
-  const int low_lim = 0;
-  const int high_lim = 99;
   static int digit_at = 0;
-
+  const int digit_c = 4;
+  const int digit_r = 1;
+  static bool is_timer_on = 0;
+  static int loop_num = 0;
   char kp_input = '0';
   int re_input = 0;
 
@@ -97,7 +131,7 @@ void loop() {
   /// button pressed
   if (re_b.pressed()) {
     Serial.println("Detect button.");
-    if (input_mode = 0) {  // -> c
+    if (input_mode == 0) {  // -> c
       input_mode = 2;
       digit_at = -1;
     } else {  // -> a
@@ -119,7 +153,7 @@ void loop() {
         digit_at = digit_at + 1;
       }
     } else if (kp_input >= 'A') {  // key 'A'
-      if (input_mode = 0) {        // -> b
+      if (input_mode == 0) {       // -> b
         input_mode = 1;
         digit_at = 0;
       } else {  // -> a
@@ -152,43 +186,34 @@ void loop() {
     num = num + re_input;
 
     // calculate number char
-    int num_ = num;
-    for (int i = digit_num - 1; i >= 0; i--) {
-      num_c[i] = num_ % 10 + '0';
-      num_ = num_ / 10;
-    }
+    num2char(num, num_c, digit_num);
   }
 
   // check low and high boundary
   if (num < low_lim) {
     num = low_lim;
-    // calculate number char
-    int num_ = num;
-    for (int i = digit_num - 1; i >= 0; i--) {
-      num_c[i] = num_ % 10 + '0';
-      num_ = num_ / 10;
-    }
-  }
-  if (num > high_lim) {
+    num2char(num, num_c, digit_num);
+  } else if (num > high_lim) {
     num = high_lim;
-    // calculate number char
-    int num_ = num;
-    for (int i = digit_num - 1; i >= 0; i--) {
-      num_c[i] = num_ % 10 + '0';
-      num_ = num_ / 10;
-    }
+    num2char(num, num_c, digit_num);
   }
 
   // decide blinking according to the input_mode
   if (input_mode == 0) {
     // disable blinking
-    // show number
-    lcd.setCursor(5, 1);
-    lcd.print(num);
+    timer_toggle = true;
+    timer_num = 0;
   } else {
     // initiate blinking
-    // show number for now
-    lcd.setCursor(5, 1);
-    lcd.print(num);
+    timer.tick();  // tick the timer
+  }
+
+  // show number
+  for (int i = 0; i < digit_num; i++) {
+    lcd.setCursor(digit_c + i, digit_r);
+    if (!timer_toggle && (digit_at == -1 || i == digit_at))  // shine
+      lcd.print(' ');
+    else
+      lcd.print(num_c[i]);
   }
 }
