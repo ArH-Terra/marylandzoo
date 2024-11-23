@@ -1,0 +1,12 @@
+Confirm settings!
+# of nodes?    (4)
+# of seq? (5) 
+Sequence? (1,2,3,4,1)
+Randomize sequence?
+Node #? (Broadcast, 1 ...)
+	Timeout (sec)? (20)
+	Distance (mm)? (300)
+	AD vol (<=30)? (30)
+	AD time (sec)? (5)
+	AD animal?     (bird)
+
