@@ -1,3 +1,10 @@
+
+
+const int detector_num = 4;  // there can be may detectors
+const int detector_ID[detector_num] = { 6, 7, 8, 9 };
+const int feeder_ID = 5;  // there can be only one feeder.
+
+// -------------- DO NOT MODIFY FOLLOWINGS ----------------
 // library and objects
 /// LCD
 #include <LiquidCrystal_I2C.h>
@@ -7,28 +14,26 @@ LiquidCrystal_I2C lcd(0x27, LCD_col_max, LCD_row_max);
 
 /// button
 #include <Button.h>
-Button re_b(12);
+Button re_b(4);
 
 /// keypad
 #include <Keypad.h>
 const byte ROWS = 4;
 const byte COLS = 4;
-// this is for membrane keypad
-// transpose this for telephone style keypad
 char hexaKeys[ROWS][COLS] = {
   { '1', '2', '3', 'A' },
-  { '4', '5', '6', 'B' },
-  { '7', '8', '9', 'C' },
-  { '*', '0', '#', 'D' }
+  { '4', '5', '6', ' ' },
+  { '7', '8', '9', '^' },
+  { '<', '0', '>', 'v' }
 };
-byte rowPins[ROWS] = { 9, 8, 7, 6 };
-byte colPins[COLS] = { 5, 4, 3, 2 };
+byte rowPins[ROWS] = { 12, 11, 10, 9 };
+byte colPins[COLS] = { 8, 7, 6, 5 };
 Keypad kp = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 /// RotaryEncoder
 #include <Arduino.h>
 #include <RotaryEncoder.h>
-RotaryEncoder re(A2, A3, RotaryEncoder::LatchMode::FOUR0);
+RotaryEncoder re(2, 3, RotaryEncoder::LatchMode::FOUR0);
 
 // timer
 #include <arduino-timer.h>
@@ -73,7 +78,7 @@ String var_list[list_row_num] = {
   "# of seq:          ",
   "Seq:               ",
   "Randomize seq!     ",
-  "Broadcast #1!      ",
+  "Broadcast detector!",
   "Node #:            ",
   " Timeout (sec):    ",
   " Distance (mm):    ",
@@ -99,22 +104,18 @@ String rec_list[list_row_num] = {
 };
 
 // recorded data
-int num_of_nodes = 4;
-const int num_of_nodes_max = 10;
 int num_of_seq = 5;
 const int num_of_seq_max = 10;
 char seq_long[num_of_seq_max] = { '1', '2', '3', '4', '1' };
-int node_data[num_of_nodes_max + 1][5];
+int node_data[detector_num + 1][5];
 
 // some small variables
 int i;
 int re_input = 0;
 
-
-
 void setup() {
   // initialize node_data
-  for (i = 1; i <= num_of_nodes_max; i++) {
+  for (i = 1; i <= detector_num; i++) {
     node_data[i][0] = 20;
     node_data[i][1] = 300;
     node_data[i][2] = 30;
@@ -136,6 +137,9 @@ void setup() {
 
   // timer initiation
   timer.every(blink_interval_ms, timer_function);
+
+  // initiate seq_long
+  
 
   // initialize serial
   Serial.begin(9600);
@@ -247,13 +251,13 @@ void loop() {
     /// general
     Serial.println("Settings:");
     Serial.print(var_list[1]);
-    Serial.println(num_of_nodes);
+    Serial.println(detector_num);
     Serial.print(var_list[2]);
     Serial.println(num_of_seq);
     Serial.print(var_list[3]);
     Serial.println(seq_long);
     // every node
-    for (i = 1; i <= num_of_nodes; i++) {
+    for (i = 1; i <= detector_num; i++) {
       Serial.println("");
       Serial.print(var_list[6]);
       Serial.println(i);
