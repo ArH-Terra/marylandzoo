@@ -12,8 +12,8 @@ const byte mp3_txPin = 3;
 const byte ultrasonic_rxPin = 10;
 const byte ultrasonic_txPin = 11;
 const int ultrasonic_relay_pin = 8;
-const byte Xbee_rxPin = A6;
-const byte Xbee_txPin = A7;
+const byte Xbee_rxPin = 7;
+const byte Xbee_txPin = 6;
 
 SoftwareSerial XBee(Xbee_rxPin, Xbee_txPin);
 SoftwareSerial mp3_serial(mp3_rxPin, mp3_txPin);

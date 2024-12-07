@@ -3,9 +3,11 @@
 SoftwareSerial XBee(2, 3);  // RX, TX
 
 // setting
-const int node_ID_list_num = 4;
-int node_ID_list[node_ID_list_num] = { 1, 2, 3, 4 };
-int food_node_ID = 2;
+//const int node_ID_list_num = 4;
+//int node_ID_list[node_ID_list_num] = { 1, 2, 3, 4 };
+const int node_ID_list_num = 1;
+int node_ID_list[node_ID_list_num] = { 1 };
+int food_node_ID = 1;
 
 //general
 int success_node_num;

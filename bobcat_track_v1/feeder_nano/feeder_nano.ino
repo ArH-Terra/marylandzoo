@@ -4,6 +4,7 @@ const int relay_trigger = LOW;    // "HIGH" or "LOW"
 const char feeder_type = 'A';     // 'A': Auger, means that a motor only needs to move forward
                                   // 'L': Linear actuator, means a motor needs to move back-and-forth
 const int actuation_time = 3000;  // Time period (millisecond) of each auger motion or linear actuator motion.
+
 // -------------- DO NOT MODIFY FOLrelay_triggerINGS ----------------
 #include <SoftwareSerial.h>
 
